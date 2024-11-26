@@ -106,31 +106,70 @@ else:
 
         return residuals_dict, results_r2, results_mae, params_dict
 
-    # Button to trigger calculations
-    if st.button("Calculate"):
-        try:
-            residuals_dict, results_r2, results_mae, params_dict = calculate_results(json_prices_filtered, selected_product)
-            st.session_state.residuals_dict = residuals_dict
-            st.session_state.results_r2 = results_r2
-            st.session_state.results_mae = results_mae
-            st.session_state.params_dict = params_dict
-            st.success("Calculations completed!")
-        except ValueError as e:
-            st.error(str(e))
+    with st.container():
+        columns = st.columns([2,6])   
+        with columns[0]:
+            # Button to trigger calculations
+            if st.button("Calculate"):
+                try:
+                    residuals_dict, results_r2, results_mae, params_dict = calculate_results(json_prices_filtered, selected_product)
+                    st.session_state.residuals_dict = residuals_dict
+                    st.session_state.results_r2 = results_r2
+                    st.session_state.results_mae = results_mae
+                    st.session_state.params_dict = params_dict
+                    st.success("Calculations completed!")
+                except ValueError as e:
+                    st.error(str(e))
 
-    if st.session_state.results_r2 and st.session_state.results_mae:
+        with columns[1]:
+            st.write("Select periods to plot:")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                plot_6_months = st.checkbox("Plot 6 Months")
+            with col2:
+                plot_1_year = st.checkbox("Plot 1 Year")
+            with col3:
+                plot_2_years = st.checkbox("Plot 2 Years")
+
+
+    # Function to get or calculate period results
+    def get_period_results(period_key, period_start_date):
+        if period_key not in st.session_state:
+            json_prices_filtered_period = json_prices[
+                (json_prices["date"] >= period_start_date) & (json_prices["date"] <= pd.to_datetime(end_date))
+            ]
+            if json_prices_filtered_period.empty:
+                st.error(f"No data available for the selected period: {period_key}.")
+                return None, None, None, None
+            residuals_dict, results_r2, results_mae, params_dict = calculate_results(json_prices_filtered_period, selected_product)
+            st.session_state[period_key] = {
+                'residuals_dict': residuals_dict,
+                'results_r2': results_r2,
+                'results_mae': results_mae,
+                'params_dict': params_dict
+            }
+        else:
+            results = st.session_state[period_key]
+            residuals_dict = results['residuals_dict']
+            results_r2 = results['results_r2']
+            results_mae = results['results_mae']
+            params_dict = results['params_dict']
+        return residuals_dict, results_r2, results_mae, params_dict
+
+    # Plotting
+    if "results_r2" in st.session_state and "results_mae" in st.session_state:
         f1_percentages = np.arange(0, 105, 5)  # 0 to 100 inclusive, steps of 5
         f1_values = f1_percentages / 100
         params_dict = st.session_state.params_dict
 
         fig = go.Figure()
 
-        # R² Trace
+        # Main R² Trace
         fig.add_trace(go.Scatter(
             x=f1_values,
             y=st.session_state.results_r2,
-            name="R²",
-            line=dict(color='blue'),
+            name="R² (Selected Period)",
+            line=dict(color='#023047'),
             mode='lines+markers',
             yaxis='y1',
             hovertemplate=(
@@ -138,15 +177,15 @@ else:
                 'R²: %{y:.4f}<br>' +
                 'c (hedge coefficient): %{customdata:.4f}'
             ),
-            customdata=[params_dict[f1] for f1 in f1_percentages]  # Add parameter values as custom data
+            customdata=[params_dict[f1] for f1 in f1_percentages]
         ))
 
-        # MAE Trace
+        # Main MAE Trace
         fig.add_trace(go.Scatter(
             x=f1_values,
             y=st.session_state.results_mae,
-            name="MAE",
-            line=dict(color='red', dash='dot'),
+            name="MAE (Selected Period)",
+            line=dict(color='#023047', dash='dot'),
             mode='lines+markers',
             yaxis='y2',
             hovertemplate=(
@@ -154,18 +193,132 @@ else:
                 'MAE: %{y:.4f}<br>' +
                 'Parameter: %{customdata:.4f}'
             ),
-            customdata=[params_dict[f1] for f1 in f1_percentages]  # Add parameter values as custom data
+            customdata=[params_dict[f1] for f1 in f1_percentages]
         ))
+
+        # Add lines for toggled periods
+        if plot_6_months:
+            period_start_date = pd.to_datetime(end_date) - pd.DateOffset(months=6)
+            residuals_dict_6m, results_r2_6m, results_mae_6m, params_dict_6m = get_period_results('6_months', period_start_date)
+            if results_r2_6m and results_mae_6m:
+                # R² Trace for 6 Months
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_r2_6m,
+                    name="R² (6 Months)",
+                    line=dict(color='#8ecae6'),
+                    mode='lines+markers',
+                    yaxis='y1',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'R² (6 Months): %{y:.4f}<br>' +
+                        'c (hedge coefficient): %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_6m[f1] for f1 in f1_percentages]
+                ))
+
+                # MAE Trace for 6 Months
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_mae_6m,
+                    name="MAE (6 Months)",
+                    line=dict(color='#8ecae6', dash='dot'),
+                    mode='lines+markers',
+                    yaxis='y2',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'MAE (6 Months): %{y:.4f}<br>' +
+                        'Parameter: %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_6m[f1] for f1 in f1_percentages]
+                ))
+
+        if plot_1_year:
+            period_start_date = pd.to_datetime(end_date) - pd.DateOffset(years=1)
+            residuals_dict_1y, results_r2_1y, results_mae_1y, params_dict_1y = get_period_results('1_year', period_start_date)
+            if results_r2_1y and results_mae_1y:
+                # R² Trace for 1 Year
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_r2_1y,
+                    name="R² (1 Year)",
+                    line=dict(color='#219ebc'),
+                    mode='lines+markers',
+                    yaxis='y1',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'R² (1 Year): %{y:.4f}<br>' +
+                        'c (hedge coefficient): %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_1y[f1] for f1 in f1_percentages]
+                ))
+
+                # MAE Trace for 1 Year
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_mae_1y,
+                    name="MAE (1 Year)",
+                    line=dict(color='#219ebc', dash='dot'),
+                    mode='lines+markers',
+                    yaxis='y2',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'MAE (1 Year): %{y:.4f}<br>' +
+                        'Parameter: %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_1y[f1] for f1 in f1_percentages]
+                ))
+
+        if plot_2_years:
+            period_start_date = pd.to_datetime(end_date) - pd.DateOffset(years=2)
+            residuals_dict_2y, results_r2_2y, results_mae_2y, params_dict_2y = get_period_results('2_years', period_start_date)
+            if results_r2_2y and results_mae_2y:
+                # R² Trace for 2 Years
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_r2_2y,
+                    name="R² (2 Years)",
+                    line=dict(color='#fb8500'),
+                    mode='lines+markers',
+                    yaxis='y1',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'R² (2 Years): %{y:.4f}<br>' +
+                        'c (hedge coefficient): %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_2y[f1] for f1 in f1_percentages]
+                ))
+
+                # MAE Trace for 2 Years
+                fig.add_trace(go.Scatter(
+                    x=f1_values,
+                    y=results_mae_2y,
+                    name="MAE (2 Years)",
+                    line=dict(color='#fb8500', dash='dot'),
+                    mode='lines+markers',
+                    yaxis='y2',
+                    hovertemplate=(
+                        'f1: %{x:.2f}<br>' +
+                        'MAE (2 Years): %{y:.4f}<br>' +
+                        'Parameter: %{customdata:.4f}'
+                    ),
+                    customdata=[params_dict_2y[f1] for f1 in f1_percentages]
+                ))
 
         # Layout configuration
         fig.update_layout(
             title=f"R² and MAE for {selected_product}",
             xaxis=dict(title="Ratio Butter_EEX_INDEX"),
             yaxis=dict(title="R²", titlefont=dict(color="blue"), tickfont=dict(color="blue")),
-            yaxis2=dict(title="MAE", titlefont=dict(color="red"), tickfont=dict(color="red"),
-                        overlaying="y", side="right"),
+            yaxis2=dict(
+                title="MAE",
+                titlefont=dict(color="red"),
+                tickfont=dict(color="red"),
+                overlaying="y",
+                side="right",
+            ),
             template="plotly_white",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            legend=dict(orientation="v", yanchor="top", y=0.99, xanchor="left", x=0.01)
         )
 
         # Display the plot
