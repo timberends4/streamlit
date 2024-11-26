@@ -44,11 +44,11 @@ def run_regression():
             (df['date'] <= pd.to_datetime(end_date))
         ]
 
-        df_merged = df_filtered.pivot(index='date', columns='product_sc', values='price').dropna().reset_index()
-
-        #remove duplicates based on date with mean of the prices
-        df_merged = df_merged.groupby('date').mean().reset_index()
+        df_filtered = df_filtered.groupby(['date', 'product_sc'], as_index=False)['price'].mean()
         
+        df_merged = df_filtered.pivot(index='date', columns='product_sc', values='price').dropna().reset_index()
+        df_merged.sort_values('date', inplace=True)
+
         df_merged['F1'] = st.session_state.get("F1", 0.5)
         df_merged['F2'] = st.session_state.get("F2", 0.5)
         df_merged['C1'] = st.session_state.get("C1", 1.0)  # Hedge coefficient
@@ -309,6 +309,10 @@ if st.session_state.get("df") is not None:
                 st.session_state.get("y_row_1")
             ])] 
 
+            df_plot = df_plot.drop_duplicates(subset=['date', 'product_sc']).reset_index(drop=True)
+            df_plot = df_plot.dropna(subset=['date', 'price'])
+            df_plot.sort_values('date', inplace=True)
+            
             fig = px.line(
                 df_plot,
                 x='date',
