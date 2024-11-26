@@ -6,37 +6,61 @@ import statsmodels.formula.api as smf
 
 st.set_page_config(page_icon= "📈" ,page_title= "R2 and MAE analysis",layout="wide")
 
+def store_value(key):
+    st.session_state[key] = st.session_state["_" + key]
+
+def load_value(key):
+    if key in st.session_state:
+        st.session_state["_" + key] = st.session_state[key]
+
 # Streamlit app
 st.title("Hedge R² and MAE Analysis")
 
-# Initialize session state for residuals
-if "residuals_dict" not in st.session_state:
-    st.session_state.residuals_dict = None
-if "results_r2" not in st.session_state:
-    st.session_state.results_r2 = None
-if "results_mae" not in st.session_state:
-    st.session_state.results_mae = None
-if "params_dict" not in st.session_state:
-    st.session_state.params_dict = None
-if "df" not in st.session_state:
-    st.session_state.df = None
-
-if st.session_state["df"] is None or "product_options" not in st.session_state:
+if "df" not in st.session_state or "product_options" not in st.session_state:
     st.warning("Please upload the Vesper Data file to proceed.")
 else:
-    json_prices = st.session_state['df']
-    product_test = st.session_state['product_options']
+    json_prices = st.session_state["df"]
+    product_test = st.session_state["product_options"]
+
+    # Initialize temporary widget values
+    load_value("start_date")
+    load_value("end_date")
+    load_value("selected_product")
 
     # Add date filter widgets
-    start_date = st.date_input("Select start date", pd.to_datetime(json_prices['date'].min()).date())
-    end_date = st.date_input("Select end date", pd.to_datetime(json_prices['date'].max()).date())
-
+    st.date_input(
+        "Select start date",
+        pd.to_datetime(json_prices["date"].min()).date(),
+        key="_start_date",
+        on_change=store_value,
+        args=["start_date"],
+    )
+    st.date_input(
+        "Select end date",
+        pd.to_datetime(json_prices["date"].max()).date(),
+        key="_end_date",
+        on_change=store_value,
+        args=["end_date"],
+    )
     # Filter data based on selected dates
-    json_prices['date'] = pd.to_datetime(json_prices['date'])
-    json_prices_filtered = json_prices[(json_prices['date'] >= pd.to_datetime(start_date)) & (json_prices['date'] <= pd.to_datetime(end_date))]
+    json_prices["date"] = pd.to_datetime(json_prices["date"])
+    start_date = st.session_state.get("start_date", pd.to_datetime(json_prices["date"].min()).date())
+    end_date = st.session_state.get("end_date", pd.to_datetime(json_prices["date"].max()).date())
+    json_prices_filtered = json_prices[
+        (json_prices["date"] >= pd.to_datetime(start_date)) & (json_prices["date"] <= pd.to_datetime(end_date))
+    ]
 
     # Selection menu for target product
-    selected_product = st.selectbox("Select the target product (y):", product_test)
+    st.selectbox(
+        "Select the target product (y):",
+        product_test,
+        key="_selected_product",
+        on_change=store_value,
+        args=["selected_product"],
+        index=0,
+    )
+    selected_product = st.session_state.get("selected_product")
+
 
     # Cache the calculation results to improve performance
     @st.cache_data

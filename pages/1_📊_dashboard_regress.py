@@ -9,29 +9,15 @@ import numpy as np
 # Set Streamlit to use wide mode for better horizontal space utilization
 st.set_page_config(layout="wide")
 
-# Initialize lock states and necessary session state variables
-default_states = {
-    "p_1_locked": False,
-    "f_1_locked": False,
-    "c_1_locked": False,
-    "p_2_locked": False,
-    "f_2_locked": False,
-    "F1": 0.5,
-    "F2": 0.5,
-    "C1": 1.0,
-    "r_squared": "",
-    "y_formula": "",
-    "df": None,
-    "vesper_options": [],
-    "product_options": [],
-    "c1_status": True,  # True means "✅", False means "❌"
-    "include_intercept": True  # New flag for intercept inclusion
+def store_value(key):
+    st.session_state[key] = st.session_state["_" + key]
 
-}
+def load_value(key):
+    if key in st.session_state:
+        st.session_state["_" + key] = st.session_state[key]
 
-for key, default_value in default_states.items():
-    if key not in st.session_state:
-        st.session_state[key] = default_value
+def toggle_state(key):
+    st.session_state[key] = not st.session_state.get(key, False)
 
 # Helper function to toggle lock state
 def toggle_lock(key):
@@ -60,13 +46,9 @@ def run_regression():
 
         df_merged = df_filtered.pivot(index='date', columns='product_sc', values='price').dropna().reset_index()
 
-        df_merged = (
-            df_merged.resample('W', on='date')[df_merged.select_dtypes(include='number').columns]
-            .mean()
-            .dropna()
-            .reset_index()
-        )
-
+        #remove duplicates based on date with mean of the prices
+        df_merged = df_merged.groupby('date').mean().reset_index()
+        
         df_merged['F1'] = st.session_state.get("F1", 0.5)
         df_merged['F2'] = st.session_state.get("F2", 0.5)
         df_merged['C1'] = st.session_state.get("C1", 1.0)  # Hedge coefficient
@@ -163,59 +145,122 @@ def run_regression():
 # --- UI Layout ---
 
 st.title("OLS Hedge Effectiveness Testing")
-    
-index_smp = st.session_state['product_options'].index('SMP, Food_EEX_INDEX')
-index_butter = st.session_state['product_options'].index('Butter_EEX_INDEX')
-# Display input controls and results only if data is loaded
+
+
+    # Display input controls and results only if data is loaded
 if st.session_state.get("df") is not None:
-    product_options = st.session_state['product_options']
+    index_smp = st.session_state['product_options'].index("SMP, Food_EEX_INDEX")
+    index_butter = st.session_state['product_options'].index("Butter_EEX_INDEX")
+    index_product_y = st.session_state["product_options"].index(st.session_state.get("y_row_1"))
 
     # --- Row 2: Input Controls for Analysis ---
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.write("Y")
-        st.selectbox("", product_options, key="y_row_1")
+        load_value("y_row_1")
+        st.selectbox(
+            "",
+            st.session_state['product_options'],
+            index=index_product_y,
+            key="_y_row_1",
+            on_change=store_value,
+            args=("y_row_1",)
+        )
 
     with col2:
         st.write("P1")
-        st.selectbox("", product_options, disabled=st.session_state.p_1_locked, key="p_1", index=index_butter)
+        load_value("p_1")
+        st.selectbox(
+            "",
+            st.session_state['product_options'],
+            disabled=st.session_state.p_1_locked,
+            key="_p_1",
+            on_change=store_value,
+            args=("p_1",),
+            index=index_butter
+        )
 
     with col3:
         st.write("F1")
-        # Avoid conflict by checking session state
-        f1_value = st.session_state.get("F1", 0.5)
-        st.number_input("", value=f1_value, key="F1")
-
+        load_value("F1")
+        st.number_input(
+            "",
+            value=st.session_state.get("F1", 0.5),
+            key="_F1",
+            on_change=store_value,
+            args=("F1",)
+        )
 
     with col4:
         st.write("Start Date")
-        st.date_input("", key="start_date", value=datetime(2019, 1, 1))
+        load_value("start_date")
+        st.date_input(
+            "",
+            key="_start_date",
+            value=datetime(2019, 1, 1),
+            on_change=store_value,
+            args=("start_date",)
+        )
 
     with col5:
         st.write("Hedge Coefficient")
-        c1_display_value = st.session_state.get("C1", 1.0)
-        st.number_input("Adjustable C1", value=c1_display_value, disabled=st.session_state.c_1_locked, key="C1")
+        load_value("C1")
+        st.number_input(
+            "Adjustable C1",
+            value=st.session_state.get("C1", 1.0),
+            disabled=st.session_state.c_1_locked,
+            key="_C1",
+            on_change=store_value,
+            args=("C1",)
+        )
 
     # --- Row 3: Additional Inputs and Run Button ---
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.write("Y (Formula)")
-        st.text_input("", value=st.session_state.get("y_formula", ""), key="y_row_2", disabled=True)
+        st.text_input(
+            "",
+            value=st.session_state.get("y_formula", ""),
+            key="y_row_2",
+            disabled=True
+        )
 
     with col2:
         st.write("P2")
-        st.selectbox("", product_options, disabled=st.session_state.p_2_locked, key="p_2", index=index_smp)
+        load_value("p_2")
+        st.selectbox(
+            "",
+            st.session_state['product_options'],
+            disabled=st.session_state.p_2_locked,
+            key="_p_2",
+            on_change=store_value,
+            args=("p_2",),
+            index=index_smp
+        )
 
     with col3:
-        f2_value = st.session_state.get("F2", 0.5)
         st.write("F2")
-        st.number_input("", value=f2_value, key="F2")
+        load_value("F2")
+        st.number_input(
+            "",
+            value=st.session_state.get("F2", 0.5),
+            key="_F2",
+            on_change=store_value,
+            args=("F2",)
+        )
 
     with col4:
         st.write("End Date")
-        st.date_input("", datetime.today(), key="end_date")
+        load_value("end_date")
+        st.date_input(
+            "",
+            datetime.today(),
+            key="_end_date",
+            on_change=store_value,
+            args=("end_date",)
+        )
 
     with col5:
         if st.button("Run OLS Model"):
@@ -226,24 +271,31 @@ if st.session_state.get("df") is not None:
 
     with buttons_col1:
         # Toggle C1 lock/unlock button
-        st.button("C currently locked: 🔒" if st.session_state.c_1_locked else "C currently unlocked: 🔓",
-                on_click=toggle_lock, args=("c_1_locked",), key="c1_lock")
+        st.button(
+            "C currently locked: 🔒" if st.session_state.get('c_1_locked', False) else "C currently unlocked: 🔓",
+            on_click=toggle_state,
+            args=("c_1_locked",),
+            key="c1_lock"
+        )
 
     with buttons_col2:
         # Toggle C include/exclude button
         st.button(
-            "C currently included: ✅" if st.session_state["c1_status"] else "C currently not included: ❌",
-            on_click=lambda: st.session_state.update({"c1_status": not st.session_state["c1_status"]}),
-            key="toggle_emoji_button"
+            "C currently included: ✅" if st.session_state.get("c1_status", True) else "C currently not included: ❌",
+            on_click=toggle_state,
+            args=("c1_status",),
+            key="toggle_c1_status"
         )
 
     with buttons_col3:
         # Toggle intercept inclusion button
         st.button(
-            "Intercept removed: ❌" if not st.session_state["include_intercept"] else "Intercept included: ✅",
-            on_click=toggle_intercept,
-            key="toggle_intercept_button"
+            "Intercept removed: ❌" if not st.session_state.get("include_intercept", True) else "Intercept included: ✅",
+            on_click=toggle_state,
+            args=("include_intercept",),
+            key="toggle_intercept"
         )
+
     # --- Row 5: Plot and OLS Regression Results ---
 
     if st.session_state.get("df") is not None:
@@ -271,7 +323,6 @@ if st.session_state.get("df") is not None:
             if 'predictions' in st.session_state:
                 pred_df = st.session_state['predictions']
                 actual_df = df_plot[df_plot['product_sc'] == st.session_state.get("y_row_1")][['date', 'price']]
-                actual_df = actual_df.resample('W', on='date').mean().dropna().reset_index()
 
                 if 'date' in pred_df.columns and 'date' in actual_df.columns:
                     pred_df['date'] = pd.to_datetime(pred_df['date'])
