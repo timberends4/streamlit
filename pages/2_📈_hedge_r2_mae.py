@@ -306,10 +306,15 @@ else:
                 ))
 
         # Layout configuration
+
         fig.update_layout(
             title=f"R² and MAE for {selected_product}",
-            xaxis=dict(title="Ratio Butter_EEX_INDEX"),
-            yaxis=dict(title="R²", titlefont=dict(color="blue"), tickfont=dict(color="blue")),
+            xaxis=dict(title="Weight of Butter EEX Index"), #Improved title
+            yaxis=dict(
+                title="R²",
+                titlefont=dict(color="blue"),
+                tickfont=dict(color="blue"),
+            ),
             yaxis2=dict(
                 title="MAE",
                 titlefont=dict(color="red"),
@@ -317,8 +322,14 @@ else:
                 overlaying="y",
                 side="right",
             ),
-            template="plotly_white",
-            legend=dict(orientation="v", yanchor="top", y=0.99, xanchor="left", x=0.01)
+            template="plotly", # changed template.
+            legend=dict(
+                orientation="v",
+                yanchor="top",
+                y=0.98,  # Minor adjustment
+                xanchor="left",
+                x=0.01,
+            ),
         )
 
         # Display the plot
