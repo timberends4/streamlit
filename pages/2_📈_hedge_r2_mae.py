@@ -30,7 +30,7 @@ else:
     # Add date filter widgets
     st.date_input(
         "Select start date",
-        pd.to_datetime(json_prices["date"].min()).date(),
+        pd.to_datetime('01-01-2015').date(),
         key="_start_date",
         on_change=store_value,
         args=["start_date"],
@@ -68,7 +68,7 @@ else:
         # Prepare merged data
         dataframes = []
 
-        for product in ['Butter_EEX_INDEX', 'SMP, Food_EEX_INDEX', selected_product]:
+        for product in ['Butter_EEX_INDEX', 'SMP, food_EEX_INDEX', selected_product]:
             product_data = json_prices_filtered[json_prices_filtered['product_sc'] == product]
             if product_data.empty:
                 raise ValueError(f"No data available for product: {product}")
@@ -83,7 +83,7 @@ else:
         f2_values = 1 - f1_values
         y_price = merged_data[selected_product].values
         feature1 = merged_data['Butter_EEX_INDEX'].values
-        feature2 = merged_data['SMP, Food_EEX_INDEX'].values
+        feature2 = merged_data['SMP, food_EEX_INDEX'].values
 
         results_r2 = []
         results_mae = []

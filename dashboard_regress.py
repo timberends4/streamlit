@@ -57,7 +57,7 @@ def main():
                         if 'product' in df.columns and 'source' in df.columns:
                             df['product_sc'] = df['product'] + '_' + df['source']
                             vesper_options = df['product_sc'].unique().tolist()
-                            vesper_options = [x for x in vesper_options if (('EEX' in x) or ('Cagliata_EU_VPI' in x) or ('Emmental_EU_VPI' in x))] 
+                            vesper_options = [x for x in vesper_options if (('EEX_INDEX' in x) or ('Cagliata_EU_VPI' in x) or ('Emmental_EU_VPI' in x))] 
                             st.session_state['vesper_options'] = vesper_options
 
                             # Create the product options list

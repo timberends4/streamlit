@@ -37,6 +37,7 @@ def run_regression():
     include_intercept = st.session_state.get("include_intercept", True)  # New flag
 
     if not df.empty and all([p1_product, p2_product, y_product, start_date, end_date]):
+
         # Filter by date range and relevant products
         df_filtered = df[
             (df['product_sc'].isin([p1_product, p2_product, y_product])) &
@@ -46,6 +47,15 @@ def run_regression():
 
         df_filtered = df_filtered.groupby(['date', 'product_sc'], as_index=False)['price'].mean()
         
+        min_date_all = df_filtered['date'].min().date()
+        max_date_all = df_filtered['date'].max().date()
+
+        if st.session_state.get("start_date") < min_date_all:
+            st.session_state["start_date"] = min_date_all
+
+        if st.session_state.get("end_date") > max_date_all:
+            st.session_state["end_date"] = max_date_all
+
         df_merged = df_filtered.pivot(index='date', columns='product_sc', values='price').dropna().reset_index()
         df_merged.sort_values('date', inplace=True)
 
@@ -150,7 +160,7 @@ st.title("OLS Hedge Effectiveness Testing")
 if st.session_state.get("df") is not None:
     print(st.session_state['product_options'])
 
-    index_smp = st.session_state['product_options'].index("SMP, Food_EEX_INDEX")
+    index_smp = st.session_state['product_options'].index("SMP, food_EEX_INDEX")
     index_butter = st.session_state['product_options'].index("Butter_EEX_INDEX")
     index_product_y = st.session_state["product_options"].index(st.session_state.get("y_row_1"))
 
