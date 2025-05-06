@@ -148,7 +148,9 @@ st.title("OLS Hedge Effectiveness Testing")
 
     # Display input controls and results only if data is loaded
 if st.session_state.get("df") is not None:
-    index_smp = st.session_state['product_options'].index("SMP, food_EEX_INDEX")
+    print(st.session_state['product_options'])
+
+    index_smp = st.session_state['product_options'].index("SMP, Food_EEX_INDEX")
     index_butter = st.session_state['product_options'].index("Butter_EEX_INDEX")
     index_product_y = st.session_state["product_options"].index(st.session_state.get("y_row_1"))
 
