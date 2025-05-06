@@ -29,9 +29,10 @@ def main():
         "include_intercept": True,  # Flag for intercept inclusion
         "start_date": None,
         "end_date": None,
-        "y_row_1": "Butter_EEX_INDEX",
-        "p_1": None,
-        "p_2": None,
+        "y_row_1": "Gouda_EEX",
+        "p_1": "Butter_EEX",
+        "p_2": "SMP, food_EEX",
+        "reg-run": False,
     }
 
     if "df" not in st.session_state:
@@ -57,7 +58,7 @@ def main():
                         if 'product' in df.columns and 'source' in df.columns:
                             df['product_sc'] = df['product'] + '_' + df['source']
                             vesper_options = df['product_sc'].unique().tolist()
-                            vesper_options = [x for x in vesper_options if (('EEX_INDEX' in x) or ('Cagliata_EU_VPI' in x) or ('Emmental_EU_VPI' in x))] 
+                            vesper_options = [x for x in vesper_options if ((('EEX' in x) or ('Cagliata_EU_VPI' in x) or ('Emmental_EU_VPI' in x)) and (('INDEX' not in x) and ('gas' not in x)))] 
                             st.session_state['vesper_options'] = vesper_options
 
                             # Create the product options list
