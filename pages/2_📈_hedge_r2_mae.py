@@ -133,12 +133,13 @@ else:
             customdata=[params_dict[f1] for f1 in f1_percentages]  # Add parameter values as custom data
         ))
 
+        print(selected_product)
         # Layout configuration
         fig.update_layout(
             title=f"R² and MAE for {selected_product}",
             xaxis=dict(title="Ratio Butter_EEX_INDEX"),
-            yaxis=dict(title="R²", titlefont=dict(color="blue"), tickfont=dict(color="blue")),
-            yaxis2=dict(title="MAE", titlefont=dict(color="red"), tickfont=dict(color="red"),
+            yaxis=dict(title="R²", tickfont=dict(color="blue")),
+            yaxis2=dict(title="MAE", tickfont=dict(color="red"),
                         overlaying="y", side="right"),
             template="plotly_white",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -156,7 +157,8 @@ else:
             selected_residuals = st.session_state.residuals_dict[selected_f1_percentage]
 
             # Define bin edges for fixed range and equal widths
-            bin_edges = np.arange(-1000, 1050, 50)  # Bins from -1000 to 1000 with step size 50
+            bin_edges = np.arange(-2, 2, 0.05)  # Bins from -1000 to 1000 with step size 50
+            bin_edges = np.round(bin_edges, 2)  # Round to 2 decimal places
 
             # Create histogram data
             hist_values, _ = np.histogram(selected_residuals, bins=bin_edges)
